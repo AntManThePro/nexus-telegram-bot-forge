@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#050508">
+<meta name="description" content="NEXUS Telegram Bot Forge — Interactive neon particle pipeline that turns BotFather + live JS kernel into a production Telegraf starter.">
+<title>NEXUS TELEGRAM BOT FORGE // AntManThePro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap');
+  :root {
+    --neon-green: #00ff87;
+    --neon-cyan: #60efff;
+    --neon-pink: #ff0080;
+    --neon-yellow: #ffcc00;
+    --bg: #050508;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+    height: 100dvh;
+    width: 100vw;
+  }
+  .neon-text { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+  .glow-green { box-shadow: 0 0 12px #00ff87, 0 0 24px #00ff8740; }
+  .glow-cyan { box-shadow: 0 0 12px #60efff, 0 0 24px #60efff40; }
+  .glow-pink { box-shadow: 0 0 12px #ff0080, 0 0 24px #ff008040; }
+  .glow-yellow { box-shadow: 0 0 12px #ffcc00, 0 0 24px #ffcc0040; }
+  canvas { display: block; }
+  .panel {
+    background: rgba(10,10,18,0.92);
+    border: 1px solid #00ff8740;
+    backdrop-filter: blur(12px);
+  }
+  .code-area {
+    background: #0a0a12;
+    border: 1px solid #60efff50;
+    color: #60efff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    resize: none;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a12; }
+  ::-webkit-scrollbar-thumb { background: #00ff87; border-radius: 3px; }
+  .btn-nexus {
+    transition: all 0.15s ease;
+    letter-spacing: 0.05em;
+  }
+  .btn-nexus:active { transform: scale(0.96); }
+  #exportBox { white-space: pre; }
+  @media (max-width: 900px) {
+    .desktop-only { display: none !important; }
+  }
+</style>
+</head>
+<body class="select-none">
+
+<!-- HEADER -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 py-2 panel border-b border-[#00ff8740]">
+  <div class="flex items-center gap-3">
+    <div class="w-3 h-3 rounded-full bg-[#00ff87] animate-pulse glow-green"></div>
+    <h1 class="text-sm md:text-base font-bold tracking-wider neon-text text-[#00ff87]" style="font-family:'Orbitron',sans-serif">
+      NEXUS // TELEGRAM BOT FORGE
+    </h1>
+  </div>
+  <div class="flex items-center gap-2 text-[10px] md:text-xs text-[#60efff]">
+    <span id="statusText">PIPELINE IDLE</span>
+    <span class="text-[#ff0080]">|</span>
+    <span id="fps">60 FPS</span>
+  </div>
+</header>
+
+<!-- MAIN CANVAS -->
+<canvas id="c" class="absolute inset-0 w-full h-full"></canvas>
+
+<!-- LEFT CONTROL PANEL -->
+<div class="fixed left-2 top-14 bottom-2 w-[min(320px,92vw)] z-40 flex flex-col gap-2 pointer-events-none md:pointer-events-auto">
+  <div class="panel p-3 rounded-lg pointer-events-auto glow-cyan">
+    <div class="text-[10px] text-[#60efff] mb-1 tracking-widest">TOKEN VAULT</div>
+    <input id="tokenInput" type="password" placeholder="Paste BotFather token here..." 
+           class="w-full bg-black/60 border border-[#60efff50] text-[#00ff87] text-xs px-2 py-1.5 rounded outline-none focus:border-[#00ff87]"
+           autocomplete="off" spellcheck="false">
+    <button id="armBtn" class="btn-nexus mt-2 w-full py-1.5 text-xs font-bold bg-[#00ff87] text-black rounded glow-green">
+      ARM TOKEN
+    </button>
+  </div>
+
+  <div class="panel p-3 rounded-lg pointer-events-auto flex-1 flex flex-col min-h-0">
+    <div class="flex justify-between items-center mb-1">
+      <div class="text-[10px] text-[#ff0080] tracking-widest">LIVE KERNEL</div>
+      <button id="hotReload" class="text-[10px] px-2 py-0.5 border border-[#ff0080] text-[#ff0080] rounded hover:bg-[#ff008020]">
+        HOT RELOAD
+      </button>
+    </div>
+    <textarea id="kernelCode" class="code-area flex-1 w-full p-2 rounded text-[11px] leading-tight" spellcheck="false">// customKernel(msg, bot, ctx)
+// Return a response object or null
+function customKernel(msg, bot, ctx) {
+  const text = (msg.text || "").toLowerCase();
+  
+  if (text === "/start") {
+    return { text: "NEXUS online. Field ops ready.\\nSend /status or any command." };
+  }
+  if (text === "/status") {
+    return { text: `Throughput: ${ctx.throughput} msg/s\\nStability: ${ctx.stability}%\\nNode: ${bot.username}` };
+  }
+  if (text.includes("unruly")) {
+    return { text: "UNRULY physics kernel acknowledged. Mobile loop armed." };
+  }
+  // default echo with field signature
+  return { text: `> ${msg.text}\\n— AntManThePro / NEXUS` };
+}</textarea>
+  </div>
+
+  <div class="panel p-3 rounded-lg pointer-events-auto">
+    <div class="text-[10px] text-[#ffcc00] mb-1 tracking-widest">COMPILE & DEPLOY</div>
+    <button id="compileBtn" class="btn-nexus w-full py-2 text-xs font-bold bg-[#ffcc00] text-black rounded glow-yellow mb-2">
+      COMPILE STARTER PAYLOAD
+    </button>
+    <button id="copyPayload" class="btn-nexus w-full py-1.5 text-xs border border-[#ffcc00] text-[#ffcc00] rounded">
+      COPY TO CLIPBOARD
+    </button>
+  </div>
+</div>
+
+<!-- RIGHT SIDE METRICS + STEPS -->
+<div class="fixed right-2 top-14 bottom-2 w-[min(280px,90vw)] z-40 flex flex-col gap-2 pointer-events-none md:pointer-events-auto desktop-only">
+  <div class="panel p-3 rounded-lg pointer-events-auto">
+    <div class="text-[10px] text-[#00ff87] tracking-widest mb-2">PIPELINE STATE</div>
+    <div class="space-y-1 text-[11px]">
+      <div class="flex justify-between"><span>BotFather</span><span id="s1" class="text-[#ff0080]">IDLE</span></div>
+      <div class="flex justify-between"><span>Token</span><span id="s2" class="text-[#ff0080]">LOCKED</span></div>
+      <div class="flex justify-between"><span>Kernel</span><span id="s3" class="text-[#00ff87]">LIVE</span></div>
+      <div class="flex justify-between"><span>API Bridge</span><span id="s4" class="text-[#ff0080]">OFFLINE</span></div>
+    </div>
+  </div>
+
+  <div class="panel p-3 rounded-lg pointer-events-auto flex-1 overflow-y-auto">
+    <div class="text-[10px] text-[#60efff] tracking-widest mb-2">BOTFATHER SEQUENCE</div>
+    <ol class="text-[11px] space-y-2 text-[#c0c0c0] leading-snug">
+      <li><span class="text-[#00ff87]">01</span> Open Telegram → @BotFather</li>
+      <li><span class="text-[#00ff87]">02</span> Send <code class="text-[#ffcc00]">/newbot</code></li>
+      <li><span class="text-[#00ff87]">03</span> Name the bot (human readable)</li>
+      <li><span class="text-[#00ff87]">04</span> Username must end in <code class="text-[#ffcc00]">bot</code></li>
+      <li><span class="text-[#00ff87]">05</span> Copy the HTTP API token</li>
+      <li><span class="text-[#00ff87]">06</span> Paste into TOKEN VAULT → ARM</li>
+      <li><span class="text-[#00ff87]">07</span> Hot-reload kernel → COMPILE</li>
+      <li><span class="text-[#00ff87]">08</span> Drop payload into Node + Telegraf</li>
+    </ol>
+  </div>
+
+  <div class="panel p-2 rounded-lg pointer-events-auto text-[10px] text-center text-[#60efff]">
+    DoubleA @ AntManThePro<br>
+    <span class="text-[#00ff87]">godmode2025.net</span>
+  </div>
+</div>
+
+<!-- EXPORT OVERLAY -->
+<div id="exportOverlay" class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4">
+  <div class="panel w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-xl glow-cyan">
+    <div class="flex justify-between items-center p-3 border-b border-[#00ff8740]">
+      <span class="text-[#00ff87] font-bold tracking-wider" style="font-family:'Orbitron'">COMPILED PAYLOAD</span>
+      <button id="closeExport" class="text-[#ff0080] text-xl leading-none px-2">×</button>
+    </div>
+    <pre id="exportBox" class="flex-1 overflow-auto p-4 text-[11px] text-[#60efff] bg-black/50"></pre>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   NEXUS TELEGRAM BOT FORGE — Core Systems
+   AntManThePro / godmode2025.net
+   ============================================================ */
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------- NODE GRAPH (hardware-software bridge) ----------
+const nodes = [
+  { id: 'intent',  x: 0.18, y: 0.32, label: 'INTENT',    color: '#60efff', type: 'input'  },
+  { id: 'father',  x: 0.38, y: 0.28, label: 'BOTFATHER', color: '#ff0080', type: 'compute'},
+  { id: 'token',   x: 0.58, y: 0.35, label: 'TOKEN',     color: '#ffcc00', type: 'memory' },
+  { id: 'kernel',  x: 0.42, y: 0.58, label: 'KERNEL',    color: '#00ff87', type: 'compute'},
+  { id: 'bridge',  x: 0.65, y: 0.62, label: 'API BRIDGE',color: '#60efff', type: 'output' },
+  { id: 'deploy',  x: 0.82, y: 0.48, label: 'DEPLOY',    color: '#ff0080', type: 'output' }
+];
+
+const links = [
+  { from: 'intent', to: 'father' },
+  { from: 'father', to: 'token'  },
+  { from: 'token',  to: 'kernel' },
+  { from: 'kernel', to: 'bridge' },
+  { from: 'bridge', to: 'deploy' },
+  { from: 'father', to: 'kernel' }
+];
+
+// ---------- PARTICLE SYSTEM ----------
+class Particle {
+  constructor(from, to) {
+    this.from = from;
+    this.to = to;
+    this.t = 0;
+    this.speed = 0.004 + Math.random() * 0.006;
+    this.size = 2 + Math.random() * 2.5;
+    this.life = 1;
+    this.hue = Math.random();
+  }
+  update() {
+    this.t += this.speed;
+    if (this.t >= 1) this.life = 0;
+  }
+  pos() {
+    const a = nodes.find(n => n.id === this.from);
+    const b = nodes.find(n => n.id === this.to);
+    const x = a.x * W + (b.x - a.x) * W * this.t;
+    const midY = (a.y + b.y) / 2 * H - 40 * Math.sin(this.t * Math.PI);
+    return { x, y: midY };
+  }
+}
+
+let particles = [];
+let armed = false;
+let tokenValue = '';
+let throughput = 0;
+let stability = 97;
+let fps = 60;
+let lastTime = performance.now();
+let frameCount = 0;
+
+function spawn() {
+  if (!armed && Math.random() > 0.3) return;
+  const link = links[Math.floor(Math.random() * links.length)];
+  particles.push(new Particle(link.from, link.to));
+  if (particles.length > 120) particles.shift();
+}
+
+// ---------- LIVE KERNEL ----------
+let kernelFn = null;
+function compileKernel() {
+  try {
+    const code = document.getElementById('kernelCode').value;
+    // Safer evaluation for the demo kernel
+    kernelFn = new Function('msg', 'bot', 'ctx', code + '\nreturn typeof customKernel === "function" ? customKernel(msg, bot, ctx) : null;');
+    document.getElementById('s3').textContent = 'LIVE';
+    document.getElementById('s3').className = 'text-[#00ff87]';
+    document.getElementById('statusText').textContent = 'KERNEL HOT-RELOADED';
+  } catch (e) {
+    document.getElementById('s3').textContent = 'ERROR';
+    document.getElementById('s3').className = 'text-[#ff0080]';
+    console.error(e);
+  }
+}
+compileKernel();
+
+// ---------- RENDER LOOP ----------
+function drawNode(n) {
+  const x = n.x * W;
+  const y = n.y * H;
+  const r = 28;
+
+  ctx.beginPath();
+  ctx.arc(x, y, r + 8, 0, Math.PI * 2);
+  ctx.fillStyle = n.color + '18';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a0a12';
+  ctx.fill();
+  ctx.strokeStyle = n.color;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = n.color;
+  ctx.shadowBlur = 16;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.font = 'bold 10px JetBrains Mono';
+  ctx.fillStyle = n.color;
+  ctx.textAlign = 'center';
+  ctx.fillText(n.label, x, y + r + 16);
+
+  ctx.font = '8px JetBrains Mono';
+  ctx.fillStyle = '#888';
+  ctx.fillText(n.type.toUpperCase(), x, y + 4);
+}
+
+function drawLink(l) {
+  const a = nodes.find(n => n.id === l.from);
+  const b = nodes.find(n => n.id === l.to);
+  const x1 = a.x * W, y1 = a.y * H;
+  const x2 = b.x * W, y2 = b.y * H;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.quadraticCurveTo((x1+x2)/2, (y1+y2)/2 - 40, x2, y2);
+  ctx.strokeStyle = '#00ff8730';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawParticle(p) {
+  const pos = p.pos();
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, p.size, 0, Math.PI * 2);
+  ctx.fillStyle = `hsla(${180 + p.hue * 80}, 100%, 60%, ${p.life})`;
+  ctx.shadowColor = '#00ff87';
+  ctx.shadowBlur = 10;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function frame(t) {
+  const dt = t - lastTime;
+  lastTime = t;
+  frameCount++;
+  if (frameCount % 12 === 0) {
+    fps = Math.round(1000 / (dt || 16));
+    document.getElementById('fps').textContent = fps + ' FPS';
+  }
+
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#00ff8708';
+  ctx.lineWidth = 1;
+  const grid = 48;
+  for (let x = 0; x < W; x += grid) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += grid) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  links.forEach(drawLink);
+
+  if (Math.random() < 0.18) spawn();
+  particles = particles.filter(p => {
+    p.update();
+    if (p.life > 0) drawParticle(p);
+    return p.life > 0;
+  });
+
+  nodes.forEach(drawNode);
+
+  if (armed) {
+    throughput = Math.min(42, throughput + (Math.random() - 0.3) * 0.8);
+    stability = Math.max(92, Math.min(99.8, stability + (Math.random() - 0.5) * 0.15));
+  }
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- UI BINDINGS ----------
+document.getElementById('armBtn').addEventListener('click', () => {
+  const tok = document.getElementById('tokenInput').value.trim();
+  if (tok.length < 20) {
+    document.getElementById('statusText').textContent = 'INVALID TOKEN LENGTH';
+    return;
+  }
+  tokenValue = tok;
+  armed = true;
+  document.getElementById('s1').textContent = 'ACTIVE';
+  document.getElementById('s1').className = 'text-[#00ff87]';
+  document.getElementById('s2').textContent = 'ARMED';
+  document.getElementById('s2').className = 'text-[#00ff87]';
+  document.getElementById('s4').textContent = 'READY';
+  document.getElementById('s4').className = 'text-[#00ff87]';
+  document.getElementById('statusText').textContent = 'TOKEN ARMED — PIPELINE LIVE';
+  document.getElementById('armBtn').textContent = 'TOKEN LOCKED';
+  document.getElementById('armBtn').classList.add('opacity-70');
+});
+
+document.getElementById('hotReload').addEventListener('click', () => {
+  compileKernel();
+  const k = nodes.find(n => n.id === 'kernel');
+  if (k) {
+    k.color = '#ffcc00';
+    setTimeout(() => { k.color = '#00ff87'; }, 400);
+  }
+});
+
+document.getElementById('compileBtn').addEventListener('click', () => {
+  const payload = generatePayload();
+  document.getElementById('exportBox').textContent = payload;
+  document.getElementById('exportOverlay').classList.remove('hidden');
+  document.getElementById('statusText').textContent = 'PAYLOAD COMPILED';
+});
+
+document.getElementById('closeExport').addEventListener('click', () => {
+  document.getElementById('exportOverlay').classList.add('hidden');
+});
+
+document.getElementById('copyPayload').addEventListener('click', () => {
+  const text = document.getElementById('exportBox').textContent || generatePayload();
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('statusText').textContent = 'PAYLOAD COPIED';
+  }).catch(() => {
+    document.getElementById('statusText').textContent = 'COPY FAILED — SELECT MANUALLY';
+  });
+});
+
+// ---------- PAYLOAD GENERATOR ----------
+function generatePayload() {
+  const kernelSrc = document.getElementById('kernelCode').value;
+  const tok = tokenValue || 'PASTE_YOUR_BOTFATHER_TOKEN_HERE';
+
+  return `// ============================================================
+// NEXUS TELEGRAM BOT — COMPILED PAYLOAD
+// Generated by NEXUS Bot Forge // AntManThePro
+// godmode2025.net
+// ============================================================
+// 
+// 1. npm init -y
+// 2. npm i telegraf
+// 3. node bot.js
+// 
+// Optional production:
+//   - set webhook instead of polling
+//   - run behind nginx / cloudflare
+//   - add rate limiting + field-ops logging
+
+const { Telegraf } = require('telegraf');
+
+const BOT_TOKEN = process.env.BOT_TOKEN || '${tok}';
+const bot = new Telegraf(BOT_TOKEN);
+
+// ---------- LIVE KERNEL (hot-reloadable logic) ----------
+${kernelSrc}
+
+// Context object the kernel can read
+const ctx = {
+  throughput: 0,
+  stability: 98.4,
+  startTime: Date.now()
+};
+
+// ---------- MESSAGE PIPELINE ----------
+bot.on('text', async (ctxTelegram) => {
+  const msg = {
+    text: ctxTelegram.message.text,
+    from: ctxTelegram.from,
+    chat: ctxTelegram.chat
+  };
+
+  try {
+    const response = customKernel(msg, { username: bot.botInfo?.username || 'nexus_bot' }, ctx);
+    if (response && response.text) {
+      await ctxTelegram.reply(response.text, { parse_mode: 'Markdown' });
+    }
+    ctx.throughput = Math.min(50, ctx.throughput + 0.3);
+  } catch (err) {
+    console.error('[NEXUS] Kernel fault:', err.message);
+    await ctxTelegram.reply('Kernel exception. Field ops notified.');
+  }
+});
+
+// ---------- LIFECYCLE ----------
+bot.launch().then(() => {
+  console.log('NEXUS BOT ONLINE — field pipeline armed');
+  console.log('Token fingerprint:', BOT_TOKEN.slice(0, 8) + '...');
+}).catch(err => {
+  console.error('Launch failed:', err.message);
+});
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+// ============================================================
+// END OF PAYLOAD — drop into any Node environment
+// ============================================================
+`;
+}
+
+// initial status
+document.getElementById('statusText').textContent = 'PIPELINE IDLE — AWAITING TOKEN';
+</script>
+</body>
+</html>
